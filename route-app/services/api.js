@@ -3,7 +3,7 @@ import { getAccessToken, setAccessToken } from "./authService";
 const API_BASE_URL = 'https://localhost:7226/api';
 
 
-async function refreshToken(){
+async function refreshToken() {
     const response = await fetch(`${API_BASE_URL}/Auth/refresh-token`, {
         method: 'POST',
         headers: {
@@ -12,7 +12,7 @@ async function refreshToken(){
         credentials: 'include'
     });
 
-    if(!response.ok){
+    if (!response.ok) {
         throw new Error('Failed to refresh token');
     }
 
@@ -23,49 +23,49 @@ async function refreshToken(){
 
 export async function apiFetch(url, options = {}) {
 
-    try{
-    let token = getAccessToken();
+    try {
+        let token = getAccessToken();
 
-    const {headers : h, ...restOptions} = options;
+        const { headers: h, ...restOptions } = options;
 
-    const headers = {
-        'Content-Type': 'application/json',
-        ...h,
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-    };
+        const headers = {
+            'Content-Type': 'application/json',
+            ...h,
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        };
 
-    let response = await fetch(`${API_BASE_URL}${url}`, {
-        ...restOptions,
-        headers,
-        credentials: 'include'
-    });
+        let response = await fetch(`${API_BASE_URL}${url}`, {
+            ...restOptions,
+            headers,
+            credentials: 'include'
+        });
 
-    if (response.status === 401) {
-        try{
-            const newToken = await refreshToken();
+        if (response.status === 401) {
+            try {
+                const newToken = await refreshToken();
 
-            const retryHeaders = {
-                ...h,
-                Authorization : `Bearer ${newToken}`,
-            };
+                const retryHeaders = {
+                    ...h,
+                    Authorization: `Bearer ${newToken}`,
+                };
 
-            response = await fetch(`${API_BASE_URL}${url}`, {
-                ...restOptions,
-                headers: retryHeaders,
-                credentials: 'include'
-            });
-        } catch (error){
-            throw new Error('Unauthorized');
+                response = await fetch(`${API_BASE_URL}${url}`, {
+                    ...restOptions,
+                    headers: retryHeaders,
+                    credentials: 'include'
+                });
+            } catch (error) {
+                throw new Error('Unauthorized');
+            }
         }
-    }
 
-    if(!response.ok){
-        const errorText = await response.text();
-        throw new Error(errorText || 'API request failed');
-    }
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'API request failed');
+        }
 
-    return await response.json();
-    } catch (error){
+        return await response.json();
+    } catch (error) {
         throw error;
     }
 }
@@ -78,16 +78,33 @@ export async function loginUser(email, password) {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ EmailOrUsername : email, password : password }),
+        body: JSON.stringify({ email: email, password: password }),
     });
 
-     if (!response.ok) {
+    if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Login failed');
     }
 
     const data = await response.json();
     setAccessToken(data.access_token);
+
+    return true;
+}
+
+export async function registerUser(firstName, lastName, email, password, country) {
+    const response = await fetch(`${API_BASE_URL}/User/register`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: email, password: password, firstName: firstName, lastName: lastName, location: country }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Register failed');
+    }
 
     return true;
 }

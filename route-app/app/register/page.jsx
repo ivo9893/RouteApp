@@ -86,21 +86,16 @@ export default function RegisterScreen() {
             return;
         }
 
-        await registerUser(firstName, lastName, email, password, selectedCountry.code)
-            .then(() => {
-                router.push('/');
-            }).catch(error => {
-                console.log(error);
-            }).finally(() => {
-                setLoadingState(false);
-            })
+        try {
+            const result = await registerUser(firstName, lastName, email, password, selectedCountry.code)
+            router.push('/');
+        } catch (err) {
+            console.log(error);
+        } finally {
+            setLoadingState(false);
+        }
 
     }
-
-    const onSwitch = () => {
-        router.push('/');
-    }
-
 
 
     return (
@@ -139,7 +134,8 @@ export default function RegisterScreen() {
                 </div>
 
                 <p className="mt-8 text-center text-sm text-gray-600">
-                    Already have an account? <Link
+                    Already have an account?
+                    <Link
                         href="/"
                         className="font-bold text-green-700 hover:text-green-800 hover:underline"
                     >

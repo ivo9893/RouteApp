@@ -43,15 +43,15 @@ export default function Login() {
     }
 
 
-    await loginUser(email, password)
-      .then(() => {
-        router.push('/main');
-      }).catch(error => {
-        newErrors.loginError = error.message;
-      }).finally(() => {
-        setLoadingState(false);
-        setErrorState(newErrors);
-      })
+    try {
+      const result = await loginUser(email, password)
+      router.push('/main');
+    } catch (err) {
+      newErrors.loginError = error.message;
+    } finally {
+      setLoadingState(false);
+      setErrorState(newErrors);
+    }
 
   };
 
@@ -62,17 +62,17 @@ export default function Login() {
       image="https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1600&q=80"
     >
       <form onSubmit={(e) => { e.preventDefault(); onLogin(e); }}>
-        <InputField name="email" label="Email Address" type="text" icon={<Mail size={20} />} placeholder="runner@example.com" error={error.email}/>
-        <InputField name="password" label="Password" type="password" icon={<Lock size={20} />} placeholder="••••••••" error={error.password}/>
+        <InputField name="email" label="Email Address" type="text" icon={<Mail size={20} />} placeholder="runner@example.com" error={error.email} />
+        <InputField name="password" label="Password" type="password" icon={<Lock size={20} />} placeholder="••••••••" error={error.password} />
 
         {isLoading &&
           <div className='mt-8 relative flex justify-center'>
             <Spinner size="md" color="green" />
           </div>
         }
-        {error.loginError && 
+        {error.loginError &&
           <p className="mt-1 text-sm text-red-500 flex items-center gap-1">{error.loginError}</p>
-        
+
         }
 
         <Button type="submit" className="mt-6" icon={null} onClick={null}>Sign In</Button>

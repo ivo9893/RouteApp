@@ -18,7 +18,8 @@ export default function Spinner({ size = 'md', color = 'green' }) {
         ${sizeClasses[size]}   
         rounded-full               
         animate-spin               
-        border-gray-200            
+        border-gray-200 
+                   
         ${colorClasses[color]}      
       `}
       role="status"

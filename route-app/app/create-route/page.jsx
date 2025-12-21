@@ -1,5 +1,5 @@
 'use client';
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { ArrowLeft, Upload, FileText, Mountain, TrendingUp, X, ImageIcon, MapPin, AlertCircle, Check } from "lucide-react";
 import InputField from '@/components/InputField';
 import DifficultyChip from "@/components/DifficultyChip";
@@ -19,16 +19,22 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
         elevation: '0 m'
     });
 
+    const [selectedImage, setSelectedImage] = useState([]);
+    const [previewImage, setPreviewImage] = useState(null);
+    const fileInputRef = useRef(null);
+
+
 
     const handleFileUpload = async (e) => {
 
         try {
-            const parsedGPS = await ParseGPX(e.target.files[0])
+            const data = await ParseGPX(e.target.files[0]);
             setFile(e.target.files[0]);
-            const routeStats = calculateRouteStats(parsedGPS)
+            const routeStats = calculateRouteStats(data.coordinate);
             setData({
-                distance : routeStats.distanceKm + ' km',
-                elevation : routeStats.elevationGain
+                distance: routeStats.distanceKm + ' km',
+                elevation: routeStats.elevationGain,
+                title: data.name
             })
         } catch (err) {
             console.log(err);
@@ -38,8 +44,39 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
     };
 
     const removeFile = () => {
-
+        setFile(null);
     };
+
+    const handleImageChange = (e) => {
+        const files = Array.from(e.target.files);
+
+        if (files.length > 0) {
+            const newImages = files.map(file => ({
+                file: file,
+                url: URL.createObjectURL(file)
+            }));
+            setSelectedImage(prev => [...prev, ...newImages]);
+        }
+
+        e.target.value = null;
+    };
+
+    const removeImage = (indexToRemove) => {
+        setSelectedImage(prev => {
+            const updated = prev.filter((_, index) => index !== indexToRemove);
+            // Revoke the URL of the removed image to free memory
+            URL.revokeObjectURL(prev[indexToRemove].url);
+            return updated;
+        });
+    };
+
+
+    const handleButtonClick = (e) => {
+        e.preventDefault();
+        fileInputRef.current.click();
+    };
+
+
 
     return (
         <div className="bg-gray-50 min-h-screen pb-24">
@@ -110,33 +147,72 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
                 )}
 
                 {/* Photos (Mock) */}
+
+                <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    className="hidden"
+                    ref={fileInputRef}
+                    onChange={handleImageChange}
+                />
+
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Photos</label>
                     <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
-                        <button className="flex-shrink-0 w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-gray-400 transition-colors">
+                        <button type="button" onClick={handleButtonClick} className="flex-shrink-0 w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 hover:border-gray-400 transition-colors">
                             <ImageIcon size={20} className="mb-1" />
                             <span className="text-xs font-medium">Add Photo</span>
                         </button>
                         {/* Placeholder for uploaded images */}
-                        {[1, 2].map(i => (
-                            <div key={i} className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-xl relative group overflow-hidden">
-                                <img src={`https://source.unsplash.com/random/200x200?nature&sig=${i}`} className="w-full h-full object-cover" alt="upload" />
-                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                    <button className="text-white bg-black/50 rounded-full p-1"><X size={16} /></button>
+                        {selectedImage.map((i, index) => (
+                            <div key={index} onClick={() => setPreviewImage(i.url)} className="flex-shrink-0 w-24 h-24 bg-gray-200 rounded-xl relative group overflow-hidden">
+                                <img src={i.url} className="w-full h-full object-cover" alt="upload" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity top-0 right-0">
+                                    <button className="text-white bg-black/50 rounded-full p-1" onClick={(e) => { e.stopPropagation(); removeImage(index); }}><X size={16} /></button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
 
+                {/* --- THE LIGHTBOX MODAL (Expands the Image) --- */}
+                {previewImage && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+                        onClick={() => setPreviewImage(null)} // Close when clicking the dark background
+                    >
+                        <div className="relative max-w-4xl w-full max-h-screen flex justify-center">
+
+                            {/* The Large Image */}
+                            <img
+                                src={previewImage}
+                                className="max-h-[90vh] max-w-full rounded-lg shadow-2xl object-contain"
+                                alt="Expanded view"
+                                onClick={(e) => e.stopPropagation()} // Optional: Prevents closing if you click the image itself
+                            />
+
+                            {/* Close Button (Top Right of screen) */}
+                            <button
+                                className="absolute -top-10 right-0 text-white hover:text-gray-300"
+                                onClick={() => setPreviewImage(null)}
+                            >
+                                <X size={32} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* Text Fields */}
                 <div className="space-y-4">
+                    {console.log(data)}
                     <InputField
                         label="Route Title"
                         type="text"
                         icon={<MapPin size={20} />}
                         placeholder="e.g., Morning Ridge Run"
                         value={data.title}
+                        name="title"
                         onChange={(e) => setData({ ...data, title: e.target.value })}
                     />
 

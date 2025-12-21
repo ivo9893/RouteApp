@@ -3,7 +3,7 @@ export function ParseGPX(file) {
         const reader = new FileReader();
 
         reader.onload = (e) => {
-            try{
+            try {
                 const xmlString = e.target.result;
                 const parser = new DOMParser();
 
@@ -12,14 +12,15 @@ export function ParseGPX(file) {
                 const trackPoints = xmlDoc.querySelectorAll("trkpt");
 
                 const coordinate = Array.from(trackPoints).map((point) => ({
-                    lat : parseFloat(point.getAttribute("lat")),
-                    long : parseFloat(point.getAttribute("lon")),
-                    ele : parseFloat(point.querySelector("ele")?.textContent || 0)
-                }))
+                    lat: parseFloat(point.getAttribute("lat")),
+                    long: parseFloat(point.getAttribute("lon")),
+                    ele: parseFloat(point.querySelector("ele")?.textContent || 0),
+                }));
 
-                resolve(coordinate);
+                const name = xmlDoc.querySelector('name').textContent;
+                resolve({ coordinate, name });
 
-            } catch(error){
+            } catch (error) {
                 reject(error)
             }
         }

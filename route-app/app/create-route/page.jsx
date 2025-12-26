@@ -1,28 +1,51 @@
 'use client';
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { ArrowLeft, Upload, FileText, Mountain, TrendingUp, X, ImageIcon, MapPin, AlertCircle, Check } from "lucide-react";
 import InputField from '@/components/InputField';
 import DifficultyChip from "@/components/DifficultyChip";
 import Button from "@/components/Button";
+import { apiFetch } from "@/services/api";
 import { ParseGPX } from "../../utils/GpxParser";
 import { calculateRouteStats } from "../../utils/CalculateStats";
 import { parse } from "path";
 
 export default function CreateRouteScreen({ onBack, onPublish }) {
     const [file, setFile] = useState(null);
-    const [difficulty, setDifficulty] = useState('Moderate');
     const [data, setData] = useState({
         title: '',
         location: '',
         description: '',
-        distance: '0 km',
-        elevation: '0 m'
+        terrainType: null,
+        routeType: null,
+        difficulty: null,
+        distance: 0,
+        elevation: 0
     });
 
     const [selectedImage, setSelectedImage] = useState([]);
     const [previewImage, setPreviewImage] = useState(null);
     const fileInputRef = useRef(null);
+    const [difficultyArray, setDifficultyArray] = useState([]);
+    const [terrainTypeArray, setTerrainTypeArray] = useState([]);
+    const [routeTypeArray, setRouteTypeArray] = useState([]);
 
+    const fetchData = async () => {
+
+        const difficultyResult = await apiFetch('/difficulty-level/get-all', { method: "GET" });
+        setDifficultyArray(difficultyResult);
+
+        const terrainTypeResult = await apiFetch('/terrain-type/get-all', { method: "GET" });
+        setTerrainTypeArray(terrainTypeResult);
+
+        const routeTypeResult = await apiFetch('/route-type/get-all', { method: "GET" });
+        setRouteTypeArray(routeTypeResult);
+    }
+
+    useEffect(() => {
+
+        fetchData();
+
+    }, []);
 
 
     const handleFileUpload = async (e) => {
@@ -32,7 +55,8 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
             setFile(e.target.files[0]);
             const routeStats = calculateRouteStats(data.coordinate);
             setData({
-                distance: routeStats.distanceKm + ' km',
+                ...data,
+                distance: routeStats.distanceKm,
                 elevation: routeStats.elevationGain,
                 title: data.name
             })
@@ -76,6 +100,20 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
         fileInputRef.current.click();
     };
 
+
+    const handleRouteTitleChange = (e) => {
+        setData({
+            ...data,
+            title: e.target.value
+        });
+    }
+
+    const handleRouteDescriptionChange = (e) => {
+        setData({
+            ...data,
+            description: e.target.value
+        })
+    }
 
 
     return (
@@ -133,14 +171,14 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
                             <div className="p-2 bg-orange-100 text-orange-600 rounded-xl"><Mountain size={24} /></div>
                             <div>
                                 <p className="text-xs text-gray-500 uppercase font-bold">Distance</p>
-                                <p className="text-xl font-bold text-gray-900">{data.distance}</p>
+                                <p className="text-xl font-bold text-gray-900">{data.distance} km.</p>
                             </div>
                         </div>
                         <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-4">
                             <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><TrendingUp size={24} /></div>
                             <div>
                                 <p className="text-xs text-gray-500 uppercase font-bold">Elevation</p>
-                                <p className="text-xl font-bold text-gray-900">{data.elevation}</p>
+                                <p className="text-xl font-bold text-gray-900">{data.elevation} m.</p>
                             </div>
                         </div>
                     </div>
@@ -213,19 +251,67 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
                         placeholder="e.g., Morning Ridge Run"
                         value={data.title}
                         name="title"
-                        onChange={(e) => setData({ ...data, title: e.target.value })}
+                        onChange={handleRouteTitleChange}
                     />
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Terrain Type</label>
+                        <div className="flex flex-wrap gap-2">
+                            {terrainTypeArray.map((type) => (
+                                <button
+                                    key={type.id}
+                                    type="button"
+                                    onClick={() => setData({
+                                        ...data,
+                                        terrainType: type
+                                    })}
+                                    className={`flex-1 min-w-[120px] py-2.5 rounded-xl text-sm font-bold border transition-all ${data.terrainType === type
+                                        ? "bg-gray-900 text-white border-gray-900 shadow-md"
+                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                        }`}
+                                >
+                                    {type.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Route Type</label>
+                        <div className="flex flex-wrap gap-2">
+                            {routeTypeArray.map((type) => (
+                                <button
+                                    key={type.id}
+                                    type="button"
+                                    onClick={() => setData({
+                                        ...data,
+                                        routeType: type
+                                    })}
+                                    className={`flex-1 min-w-[120px] px-4 py-2 rounded-xl text-sm font-bold border transition-all ${data.routeType === type
+                                            ? "bg-green-700 text-white border-green-700 ring-2 ring-green-200"
+                                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                        }`}
+                                >
+                                    {type.name}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty</label>
                         <div className="flex flex-wrap gap-2">
-                            {['Easy', 'Moderate', 'Hard', 'Extreme'].map((level) => (
+                            {difficultyArray.map((d) => (
                                 <DifficultyChip
-                                    key={level}
-                                    level={level}
-                                    selected={difficulty === level}
-                                    onClick={() => setDifficulty(level)}
+                                    key={d.id}
+                                    id={d.id}
+                                    level={d.name}
+                                    selected={data.difficulty === d}
+                                    onClick={() => setData({
+                                        ...data,
+                                        difficulty: d
+                                    })}
                                 />
                             ))}
                         </div>
@@ -238,7 +324,7 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
                             className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none resize-none text-gray-700 bg-white"
                             placeholder="Describe the terrain, best time to run, and any hazards..."
                             value={data.description}
-                            onChange={(e) => setData({ ...data, description: e.target.value })}
+                            onChange={handleRouteDescriptionChange}
                         />
                     </div>
                 </div>

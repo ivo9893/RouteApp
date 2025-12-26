@@ -37,8 +37,9 @@ export async function apiFetch(url, options = {}) {
         let response = await fetch(`${API_BASE_URL}${url}`, {
             ...restOptions,
             headers,
-            credentials: 'include'
         });
+
+
 
         if (response.status === 401) {
             try {
@@ -63,7 +64,6 @@ export async function apiFetch(url, options = {}) {
             const errorText = await response.text();
             throw new Error(errorText || 'API request failed');
         }
-
         return await response.json();
     } catch (error) {
         throw error;

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 
-export default function InputField({ label, name, type, icon, placeholder, value, error }) {
+export default function InputField({ label, name, type, icon, placeholder, value, onChange, error }) {
   const [showPassword, setShowPassword] = useState(false);
   const isPassword = type === 'password';
   const inputType = isPassword ? (showPassword ? 'text' : 'password') : type;
@@ -19,6 +19,7 @@ export default function InputField({ label, name, type, icon, placeholder, value
           placeholder={placeholder}
           name={name}
           value={value}
+          onChange={onChange}
         />
         {isPassword && (
           <button

@@ -13,8 +13,6 @@ import {
     Mail,
     Lock,
     User,
-    FlagIcon,
-    Form
 } from 'lucide-react';
 import { useState } from 'react';
 

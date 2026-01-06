@@ -4,14 +4,14 @@ import { ArrowLeft, Upload, FileText, Mountain, TrendingUp, X, ImageIcon, MapPin
 import InputField from '@/components/InputField';
 import DifficultyChip from "@/components/DifficultyChip";
 import Button from "@/components/Button";
-import { apiFetch } from "@/services/api";
-import { ParseGPX } from "../../utils/GpxParser";
-import { calculateRouteStats } from "../../utils/CalculateStats";
-import { parse } from "path";
+import { makeRequest } from "@/services/api";
+import Spinner from '@/components/Spinner'
+import { uploadToCloudinary } from "../actions";
 
-export default function CreateRouteScreen({ onBack, onPublish }) {
+export default function CreateRouteScreen() {
     const [file, setFile] = useState(null);
     const [data, setData] = useState({
+        id: null,
         title: '',
         location: '',
         description: '',
@@ -28,16 +28,18 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
     const [difficultyArray, setDifficultyArray] = useState([]);
     const [terrainTypeArray, setTerrainTypeArray] = useState([]);
     const [routeTypeArray, setRouteTypeArray] = useState([]);
+    const [imagesUrls, setImageUrls] = useState([]);
+    const [isLoading, setLoadingState] = useState(false);
 
     const fetchData = async () => {
 
-        const difficultyResult = await apiFetch('/difficulty-level/get-all', { method: "GET" });
+        const difficultyResult = await makeRequest('/difficulty-level/get-all', { method: "GET" });
         setDifficultyArray(difficultyResult);
 
-        const terrainTypeResult = await apiFetch('/terrain-type/get-all', { method: "GET" });
+        const terrainTypeResult = await makeRequest('/terrain-type/get-all', { method: "GET" });
         setTerrainTypeArray(terrainTypeResult);
 
-        const routeTypeResult = await apiFetch('/route-type/get-all', { method: "GET" });
+        const routeTypeResult = await makeRequest('/route-type/get-all', { method: "GET" });
         setRouteTypeArray(routeTypeResult);
     }
 
@@ -48,22 +50,39 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
     }, []);
 
 
+    const onBack = () => {
+        window.history.back();
+    }
+
     const handleFileUpload = async (e) => {
 
         try {
-            const data = await ParseGPX(e.target.files[0]);
+
+            setLoadingState(true);
+            const formData = new FormData();
+            formData.append('file', e.target.files[0]);
+            const gpxData = await makeRequest('/Route/initial-create-route', {
+                method: "POST",
+                body: formData
+            }, true);
+
             setFile(e.target.files[0]);
-            const routeStats = calculateRouteStats(data.coordinate);
+
+            var totalDistance = gpxData.data.route.totalDistance / 1000; // in kilometers
+            var totalElevation = gpxData.data.route.totalElevation;
+            var name = gpxData.data.route.name;
             setData({
                 ...data,
-                distance: routeStats.distanceKm,
-                elevation: routeStats.elevationGain,
-                title: data.name
+                id: gpxData.data.route.routeId,
+                distance: totalDistance.toFixed(1),
+                elevation: totalElevation,
+                title: name
             })
+
         } catch (err) {
             console.log(err);
         } finally {
-
+            setLoadingState(false);
         }
     };
 
@@ -71,15 +90,34 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
         setFile(null);
     };
 
-    const handleImageChange = (e) => {
+    const handleImageChange = async (e) => {
         const files = Array.from(e.target.files);
 
         if (files.length > 0) {
+            
+            const formData = new FormData();
+            
             const newImages = files.map(file => ({
                 file: file,
                 url: URL.createObjectURL(file)
             }));
+
             setSelectedImage(prev => [...prev, ...newImages]);
+
+            
+            for(const file of files){
+                formData.append("file", file);
+            }
+
+            try{
+                const uploadedUrls = await uploadToCloudinary(formData);
+                setImageUrls(uploadedUrls);
+            } catch(error){
+                console.error("Failed upload : ", error);
+            } finally{
+
+            }
+
         }
 
         e.target.value = null;
@@ -115,6 +153,32 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
         })
     }
 
+    const routeSave = async (e) => {
+        e.preventDefault();
+        try {
+            setLoadingState(true);
+            const result = await makeRequest('/Route/update-route', {
+                method: "PUT",
+                body: JSON.stringify({
+                    Id: data.id,
+                    Name: data.title,
+                    Description: data.description,
+                    TerrainType: data.terrainType.id,
+                    RouteType: data.routeType.id,
+                    DifficultyLevel: data.difficulty.id,
+                    ImagesUrls : imagesUrls
+                })
+            });
+
+            if(result.success) {
+                console.log("Route saved successfully!");
+            }
+        } catch (err) {
+            console.log(err);
+        } finally {
+            setLoadingState(false);
+        }
+    }
 
     return (
         <div className="bg-gray-50 min-h-screen pb-24">
@@ -183,6 +247,13 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
                         </div>
                     </div>
                 )}
+
+
+                {isLoading &&
+                    <div className='mt-8 relative flex justify-center'>
+                        <Spinner size="md" color="green" />
+                    </div>
+                }
 
                 {/* Photos (Mock) */}
 
@@ -288,8 +359,8 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
                                         routeType: type
                                     })}
                                     className={`flex-1 min-w-[120px] px-4 py-2 rounded-xl text-sm font-bold border transition-all ${data.routeType === type
-                                            ? "bg-green-700 text-white border-green-700 ring-2 ring-green-200"
-                                            : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                                        ? "bg-green-700 text-white border-green-700 ring-2 ring-green-200"
+                                        : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
                                         }`}
                                 >
                                     {type.name}
@@ -336,7 +407,7 @@ export default function CreateRouteScreen({ onBack, onPublish }) {
                 </div>
 
                 <div className="pt-4">
-                    <Button onClick={onPublish} icon={<Check size={20} />}>Publish Route</Button>
+                    <Button onClick={routeSave} icon={<Check size={20} />}>Publish Route</Button>
                 </div>
 
             </div>

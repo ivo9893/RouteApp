@@ -1,13 +1,21 @@
 'use client';
 import NavigationButton from '@/components/NavigationButton';
-import { Plus, Map, Heart, Bell, User } from 'lucide-react';
+import { Plus, Map, Heart, Bell, User, Router } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Main() {
 
+    const router = useRouter();
     const [activeScreen, setActiveScreen] = useState('home');
     const isDetailView = activeScreen === 'detail';
     const isCreateView = activeScreen === 'create';
+
+
+    const handleNavigate = (screen) => {
+        setActiveScreen(screen);
+        router.push(`${screen}`);
+    };
     return (
         <div className="bg-gray-50 min-h-screen font-sans text-gray-900">
             {/* Bottom Navigation (Mobile Only, hidden on detail/create) */}
@@ -45,7 +53,7 @@ export default function Main() {
 
                     {/* Desktop Center Add Button */}
                     <button
-                        onClick={() => handleNavigate('create')}
+                        onClick={() => handleNavigate('create-route')}
                         className="bg-orange-600 hover:bg-orange-700 text-white p-3 rounded-full shadow-lg hover:shadow-orange-600/40 transform hover:-translate-y-1 transition-all mx-2"
                     >
                         <Plus size={24} strokeWidth={3} />

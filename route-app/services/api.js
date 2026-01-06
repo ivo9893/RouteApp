@@ -21,7 +21,7 @@ async function refreshToken() {
     return data.access_token;
 }
 
-export async function apiFetch(url, options = {}) {
+export async function makeRequest(url, options = {}, isFile = false) {
 
     try {
         let token = getAccessToken();
@@ -29,7 +29,7 @@ export async function apiFetch(url, options = {}) {
         const { headers: h, ...restOptions } = options;
 
         const headers = {
-            'Content-Type': 'application/json',
+            ...(isFile ? {} : { 'Content-Type': 'application/json' }),
             ...h,
             ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         };
